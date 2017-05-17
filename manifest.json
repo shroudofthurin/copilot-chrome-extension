@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "Copilot Chrome Extension",
+  "version": "0.0.1",
+  "description": "This extension takes Copilot users from a brand site url to the corresponding Copilot content",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png"
+  },
+  "browser_action": {
+    "default_icon": "icons/icon48.png",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "browsingData",
+    "cookies",
+    "tabs",
+    "privacy",
+    "*://*.conde.io/*",
+    "https://*.conde.io/*"
+  ]
+}
