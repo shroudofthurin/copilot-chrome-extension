@@ -1,0 +1,59 @@
+{
+  "manifest_version": 2,
+  "name": "Copilot Chrome Extension",
+  "version": "0.0.1",
+  "description": "This extension takes Copilot users from a brand site url to the corresponding Copilot content",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png"
+  },
+  "browser_action": {
+    "default_icon": "icons/icon48.png"
+  },
+  "permissions": [
+    "activeTab",
+    "browsingData",
+    "cookies",
+    "tabs",
+    "privacy",
+    "http://*/*",
+    "https://*/*",
+    "*://*.conde.io/*",
+    "https://*.conde.io/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://www.allure.com/*",
+        "http://www.architecturaldigest.com/*",
+        "http://www.bonappetit.com/*",
+        "http://www.brides.com/*",
+        "http://www.cntrending.com/*",
+        "http://www.cntraveler.com/*",
+        "http://www.details.com/*",
+        "http://engineering.condenast.io/*",
+        "http://www.epicurious.com/*",
+        "http://www.glamour.com/*",
+        "http://www.golfdigest.com/*",
+        "http://www.gq.com/*",
+        "http://www.pitchfork.com/*",
+        "http://www.self.com/*",
+        "http://www.teenvogue.com/*",
+        "http://www.newyorker.com/*",
+        "http://www.vanityfair.com/*",
+        "http://www.vogue.com/*",
+        "http://www.vogue.de/*",
+        "http://www.wmagazine.com/*",
+        "http://www.wired.com/*"
+      ],
+      "js": [
+        "inject.js"
+      ]
+    }
+  ]
+}
