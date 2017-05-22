@@ -13,12 +13,11 @@ function getBrandFromHostname(hostname) {
     {name: 'CN Trending', abbv: 'snd', host: 'www.cntrending.com'},
     {name: 'Conde Nast Traveler', abbv: 'cnt', host: 'www.cntraveler.com'},
     {name: 'Details', abbv: 'det', host: 'www.details.com'},
-    {name: 'Engineering', abbv: 'engineering', host: 'engineering.condenast.io'},
     {name: 'Epicurious', abbv: 'epi', host: 'www.epicurious.com'},
     {name: 'Glamour', abbv: 'glm', host: 'www.glamour.com'},
     {name: 'Golf Digest', abbv: 'gd', host: 'www.golfdigest.com'},
     {name: 'GQ', abbv: 'gq', host: 'www.gq.com'},
-    {name: 'Pitchfork', abbv: 'p4k', host: 'www.pitchfork.com'},
+    {name: 'Pitchfork', abbv: 'p4k', host: 'pitchfork.com'},
     {name: 'Self', abbv: 'self', host: 'www.self.com'},
     {name: 'Teen Vogue', abbv: 'tnv', host: 'www.teenvogue.com'},
     {name: 'The New Yorker', abbv: 'tny', host: 'www.newyorker.com'},
@@ -26,7 +25,7 @@ function getBrandFromHostname(hostname) {
     {name: 'Vogue', abbv: 'vogue', host: 'www.vogue.com'},
     {name: 'Vogue Germany', abbv: 'vde', host: 'www.vogue.de'},
     {name: 'W Magazine', abbv: 'wmag', host: 'www.wmagazine.com'},
-    {name: 'Wired', abbv: 'wrd', host: 'www.wired.com'}
+    {name: 'Wired', abbv: 'wired', host: 'www.wired.com'}
   ];
   return brands.find(function(brand) { return brand.host === hostname });
 }
