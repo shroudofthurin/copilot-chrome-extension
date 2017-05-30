@@ -1,0 +1,58 @@
+{
+  "manifest_version": 2,
+  "name": "Copilot Chrome Extension",
+  "version": "0.0.1",
+  "description": "This extension takes Copilot users from a brand site url to the corresponding Copilot content",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png"
+  },
+  "browser_action": {
+    "default_icon": "icons/icon48.png"
+  },
+  "permissions": [
+    "activeTab",
+    "browsingData",
+    "cookies",
+    "tabs",
+    "privacy",
+    "http://*/*",
+    "https://*/*",
+    "*://*.conde.io/*",
+    "https://*.conde.io/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.allure.com/*",
+        "*://www.architecturaldigest.com/*",
+        "*://www.bonappetit.com/*",
+        "*://www.brides.com/*",
+        "*://www.cntrending.com/*",
+        "*://www.cntraveler.com/*",
+        "*://www.details.com/*",
+        "*://www.epicurious.com/*",
+        "*://www.glamour.com/*",
+        "*://www.golfdigest.com/*",
+        "*://www.gq.com/*",
+        "*://pitchfork.com/*",
+        "*://www.self.com/*",
+        "*://www.teenvogue.com/*",
+        "*://www.newyorker.com/*",
+        "*://www.vanityfair.com/*",
+        "*://www.vogue.com/*",
+        "*://www.vogue.de/*",
+        "*://www.wmagazine.com/*",
+        "*://www.wired.com/*"
+      ],
+      "js": [
+        "inject.js"
+      ]
+    }
+  ]
+}
