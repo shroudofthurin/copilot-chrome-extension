@@ -46,10 +46,10 @@ function getBrandAPI(brand) {
       searchHost = 'vf-api.aws.conde.io/v2';
       break;
     case 'bon':
-      searchHost = 'bonappetit-api.aws.conde.io/';
+      searchHost = 'bonappetit-api.aws.conde.io';
       break;
     case 'p4k':
-      searchHost = 'pitchfork-api.aws.conde.io/';
+      searchHost = 'pitchfork-api.aws.conde.io';
       break;
     default:
       searchHost = brand.abbv + '-api.aws.conde.io';
