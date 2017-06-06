@@ -4,7 +4,7 @@ A chrome extension that takes Copilot users from a brand site url to the corresp
 ### Installation
 For now, using this extension requires running it in developer mode. You can
 navigate to `chrome://extensions/`, check the `Developer mode` checkbox, and
-finally click `Load unpacked extenssion...` to navigate to your cloned copy of
+finally click `Load unpacked extension...` to navigate to your cloned copy of
 the repo.
 
 ### Caveats
