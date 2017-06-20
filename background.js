@@ -4,61 +4,30 @@
  * @param {function(string)} hostname - called with the URL of the current tab
  *
  */
-function getBrandFromHostname(hostname) {
-  let brands = [
-    {name: 'Allure', abbv: 'all', host: 'www.allure.com'},
-    {name: 'Architecturl Digest', abbv: 'ad', host: 'www.architecturaldigest.com'},
-    {name: 'Bon Appétit', abbv: 'bon', host: 'www.bonappetit.com'},
-    {name: 'Brides', abbv: 'brides', host: 'www.brides.com'},
-    {name: 'CN Trending', abbv: 'snd', host: 'www.cntrending.com'},
-    {name: 'Conde Nast Traveler', abbv: 'cnt', host: 'www.cntraveler.com'},
-    {name: 'Details', abbv: 'det', host: 'www.details.com'},
-    {name: 'Epicurious', abbv: 'epi', host: 'www.epicurious.com'},
-    {name: 'Glamour', abbv: 'glm', host: 'www.glamour.com'},
-    {name: 'Golf Digest', abbv: 'gd', host: 'www.golfdigest.com'},
-    {name: 'GQ', abbv: 'gq', host: 'www.gq.com'},
-    {name: 'Pitchfork', abbv: 'p4k', host: 'pitchfork.com'},
-    {name: 'Self', abbv: 'self', host: 'www.self.com'},
-    {name: 'Teen Vogue', abbv: 'tnv', host: 'www.teenvogue.com'},
-    {name: 'The New Yorker', abbv: 'tny', host: 'www.newyorker.com'},
-    {name: 'Vanity Fair', abbv: 'vf', host: 'www.vanityfair.com'},
-    {name: 'Vogue', abbv: 'vogue', host: 'www.vogue.com'},
-    {name: 'Vogue Germany', abbv: 'vde', host: 'www.vogue.de'},
-    {name: 'W Magazine', abbv: 'wmag', host: 'www.wmagazine.com'},
-    {name: 'Wired', abbv: 'wired', host: 'www.wired.com'}
-  ];
-  return brands.find(function(brand) { return brand.host === hostname });
-}
 
-/**
- * Get the brand api.
- *
- * @param {function(hash)} brand - called with the brand hash
- *
- */
-function getBrandAPI(brand) {
-  let searchHost;
-  switch (brand.abbv) {
-    case 'det':
-      searchHost = 'details-api.aws.conde.io';
-      break;
-    case 'vf':
-      searchHost = 'vf-api.aws.conde.io/v2';
-      break;
-    case 'bon':
-      searchHost = 'bonappetit-api.aws.conde.io';
-      break;
-    case 'p4k':
-      searchHost = 'pitchfork-api.aws.conde.io';
-      break;
-    default:
-      searchHost = brand.abbv + '-api.aws.conde.io';
+let brandsPromise
+
+function getBrandFromHostname(hostname) {
+  if (!brandsPromise) {
+    brandsPromise = fetchCopilotData('api/configs');
   }
-  return 'https://' + searchHost;
+
+  return new Promise(function (resolve, reject) {
+    brandsPromise.then(function (brands) {
+      let brand = brands.find(function(config) {
+        return hostname.indexOf(config.hostnames.consumer) > -1 || hostname.indexOf(config.hostnames.preview) > -1;
+      });
+      if (brand) {
+        resolve(brand);
+      } else {
+        reject();
+      }
+    })
+  });
 }
 
 function status(response) {
-  if (response.status >= 200 && response.status < 300) {
+  if (response.status >= 200 && response.status < 300 && response.redirected === false) {
     return Promise.resolve(response)
   } else {
     return Promise.reject(new Error(response.statusText))
@@ -69,49 +38,104 @@ function json(response) {
   return response.json()
 }
 
-function pluralizeType(type) {
-  let specialTypes = {
-    gallery: 'galleries'
-  };
-  return specialTypes[type] || type + 's';
-}
+/**
+ * Search the API for piece of content using digitalData, if found save the URL and enable the browserAction
+ * @param  {Object} tab         tab where digitalData refers to
+ * @param  {Object} digitalData data object that include Copilot information             
+ */
+function findCopilotContent(tab, digitalData) {
+  if (digitalData && digitalData.contentID) {
+    let url = tab.url;
+    let id  = digitalData.contentID;
 
-/* A function creator for callbacks */
-function openContentFormInCopilot(digitalData) {
-  if (digitalData) {
-    chrome.tabs.query({'active': true, currentWindow: true}, function(tabs) {
-      let url = tabs[0].url;
-      let id  = digitalData.contentID;
+    let hostname = new URL(url).hostname;
+    let brand;
 
-      let hostname = new URL(url).hostname;
-      let brand    = getBrandFromHostname(hostname);
-      let brandAPI = getBrandAPI(brand);
+    getBrandFromHostname(hostname)
+    .then(function (result) {
+      brand = result;
+      return authInstance();
+    })
+    .then(function (authObj) {
+      // Check if user has access to brand
+      if (authObj && authObj.brands.indexOf(brand.code) > -1) {
+        return setBrandCookie(brand.code);
+      }
+      Promise.reject(new Error('User does not have access to brand'));
+    })
+    .then(searchCopilot(id))
+    .then(function(data) {
+      if (data.hits.total === 1) {
+        let hit = data.hits.hits[0];
+        let url = `https://copilot.aws.conde.io/${brand.code}/${hit._source.meta.collectionName}/${hit._id}`;
+        let storageData = {};
+        storageData[`url${tab.id}`] = url;
 
-      let searchURL = `${brandAPI}/search?id=${id}`;
-      let baseURL = 'https://copilot.aws.conde.io';
-
-
-      fetch(searchURL)
-        .then(status)
-        .then(json)
-        .then(function(data) {
-          if (data.hits.total) {
-            let hit = data.hits.hits[0];
-            let url = `${baseURL}/${brand.abbv}/${pluralizeType(hit._type)}/${hit._id}`;
-
-            chrome.tabs.create({url: url});
-          }
-        }).catch(function(error) {
-          console.log('Request failed', error);
+        chrome.storage.sync.set(storageData, function() {
+          chrome.browserAction.enable(tab.id);
+          chrome.browserAction.setBadgeText({text: '', tabId: tab.id});
+          chrome.browserAction.setTitle({title: 'Open in Copilot', tabId: tab.id});
         });
+      }
+    })
+    .catch(function (err) {
+      chrome.browserAction.setBadgeText({text: '!', tabId: tab.id});
+      chrome.browserAction.setTitle({title: 'Error connecting to Copilot', tabId: tab.id});
     });
   }
 }
 
-chrome.browserAction.onClicked.addListener(function(tab) {
-  if (tab) {
-    /* ...if it matches, send a message specifying a callback too */
-    chrome.tabs.sendMessage(tab.id, { text: "report_back" }, openContentFormInCopilot);
-  }
+function setBrandCookie(brandCode) {
+  return new Promise(function (resolve, reject) {
+    let brandCookie = {
+      url: 'https://copilot.aws.conde.io/api/search',
+      name: 'brand',
+      value: brandCode,
+      expirationDate: (new Date().getTime()/1000) + 10
+    };
 
+    /* Set brand cookie to the current brand */
+    chrome.cookies.set(brandCookie, function (cookie) {
+      if (cookie) {
+        resolve(cookie);
+      } else {
+        reject(new Error('Failed to set cookie'));
+      }
+    });
+  });
+}
+
+function authInstance() {
+  return fetchCopilotData('auth/instance');
+}
+
+function searchCopilot(id) {
+  return function () {
+    return fetchCopilotData(`api/search?view=edit&id=${id}`);
+  }
+}
+
+function fetchCopilotData(path) {
+  return new Promise(function (resolve, reject) {
+    fetch(`https://copilot.aws.conde.io/${path}`, {credentials: 'include', redirect: 'manual'})
+    .then(status)
+    .then(json)
+    .then(resolve)
+    .catch(reject);
+  });
+}
+
+/* Listen for the content-script to send digitalData if it exists */
+chrome.runtime.onMessage.addListener(function (msg, sender) {
+  findCopilotContent(sender.tab, msg.digitalData);
 });
+
+/* On Click - open the saved Copilot URL */
+chrome.browserAction.onClicked.addListener(function(tab) {  
+  chrome.storage.sync.get(`url${tab.id}`, function(value) {
+    chrome.tabs.create({url: value[`url${tab.id}`]});
+  });
+});
+
+/* Disable the browserAction on start */
+chrome.browserAction.disable();

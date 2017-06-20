@@ -1,21 +1,15 @@
-/* Format script content */
-function formatDigitalData(data) {
-  let str = data.replace(/\s/g, '').match(/{".*"}/i)[0];
-  return JSON.parse(str);
-}
+let digitalData;
 
-/* Listen for messages */
-chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
-    /* If the received message has the expected format... */
-    for (const a of document.querySelectorAll('script')) {
-      if (a.textContent.includes('var digitalData')) {
-        let data = a.textContent.replace('var digitalData = ', '');
+var script = document.createElement('script');
+script.textContent = String.raw`setTimeout(function () { 
+  var event = document.createEvent("CustomEvent");  
+  event.initCustomEvent("cpScriptLoaded", true, true, {"digitalData": digitalData});
+  window.dispatchEvent(event);
+}, 500);`;
 
-        sendResponse(formatDigitalData(data));
-      } else if (a.textContent.includes('window.digitalData')) {
-        let data = a.textContent.replace('window.digitalData=', '');
+(document.head || document.documentElement).appendChild(script);
 
-        sendResponse(formatDigitalData(data));
-      }
-    }
+window.addEventListener("cpScriptLoaded", function (e) {
+  digitalData = e.detail.digitalData;
+  chrome.runtime.sendMessage({ digitalData: digitalData });
 });
