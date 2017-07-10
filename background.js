@@ -4,8 +4,7 @@
  * @param {function(string)} hostname - called with the URL of the current tab
  *
  */
-
-let brandsPromise
+let brandsPromise;
 
 function getBrandFromHostname(hostname) {
   if (!brandsPromise) {
@@ -26,6 +25,62 @@ function getBrandFromHostname(hostname) {
   });
 }
 
+/**
+ * Search the API for piece of content using digitalData, if found save the URL and enable the browserAction
+ * @param  {Object} tab         tab where digitalData refers to
+ * @param  {Object} digitalData data object that include Copilot information
+ */
+function findCopilotContent(tab) {
+  let brand;
+  let url = new URL(tab.url);
+
+  let hostname = url.hostname;
+  let pathname = url.pathname;
+  let path = pathname.slice(1, pathname.length);
+
+  getBrandFromHostname(hostname)
+  .then(function (result) {
+    brand = result;
+    return authInstance();
+  })
+  .then(function (authObj) {
+    // Check if user has access to brand
+    if (authObj && authObj.brands.indexOf(brand.code) > -1) {
+      return setBrandCookie(brand.code);
+    }
+    Promise.reject(new Error('User does not have access to brand'));
+  })
+  .then(searchCopilotByURI(encodeURIComponent(path)))
+  .then(function(data) {
+    if (data.hits.total === 1) {
+      let hit = data.hits.hits[0];
+      let url = `https://copilot.aws.conde.io/${brand.code}/${hit._source.meta.collectionName}/${hit._id}`;
+      let storageData = {};
+      storageData[`url${tab.id}`] = url;
+
+      chrome.storage.sync.set(storageData, function() {
+        chrome.browserAction.enable(tab.id);
+        chrome.browserAction.setBadgeText({text: '', tabId: tab.id});
+        chrome.browserAction.setTitle({title: 'Open in Copilot', tabId: tab.id});
+      });
+    }
+  })
+  .catch(function (err) {
+    chrome.browserAction.setBadgeText({text: '!', tabId: tab.id});
+    chrome.browserAction.setTitle({title: 'Error connecting to Copilot', tabId: tab.id});
+  });
+}
+
+function fetchCopilotData(path) {
+  return new Promise(function (resolve, reject) {
+    fetch(`https://copilot.aws.conde.io/${path}`, {credentials: 'include', redirect: 'manual'})
+    .then(status)
+    .then(json)
+    .then(resolve)
+    .catch(reject);
+  });
+}
+
 function status(response) {
   if (response.status >= 200 && response.status < 300 && response.redirected === false) {
     return Promise.resolve(response)
@@ -35,54 +90,7 @@ function status(response) {
 }
 
 function json(response) {
-  return response.json()
-}
-
-/**
- * Search the API for piece of content using digitalData, if found save the URL and enable the browserAction
- * @param  {Object} tab         tab where digitalData refers to
- * @param  {Object} digitalData data object that include Copilot information             
- */
-function findCopilotContent(tab, digitalData) {
-  if (digitalData && digitalData.contentID) {
-    let url = tab.url;
-    let id  = digitalData.contentID;
-
-    let hostname = new URL(url).hostname;
-    let brand;
-
-    getBrandFromHostname(hostname)
-    .then(function (result) {
-      brand = result;
-      return authInstance();
-    })
-    .then(function (authObj) {
-      // Check if user has access to brand
-      if (authObj && authObj.brands.indexOf(brand.code) > -1) {
-        return setBrandCookie(brand.code);
-      }
-      Promise.reject(new Error('User does not have access to brand'));
-    })
-    .then(searchCopilot(id))
-    .then(function(data) {
-      if (data.hits.total === 1) {
-        let hit = data.hits.hits[0];
-        let url = `https://copilot.aws.conde.io/${brand.code}/${hit._source.meta.collectionName}/${hit._id}`;
-        let storageData = {};
-        storageData[`url${tab.id}`] = url;
-
-        chrome.storage.sync.set(storageData, function() {
-          chrome.browserAction.enable(tab.id);
-          chrome.browserAction.setBadgeText({text: '', tabId: tab.id});
-          chrome.browserAction.setTitle({title: 'Open in Copilot', tabId: tab.id});
-        });
-      }
-    })
-    .catch(function (err) {
-      chrome.browserAction.setBadgeText({text: '!', tabId: tab.id});
-      chrome.browserAction.setTitle({title: 'Error connecting to Copilot', tabId: tab.id});
-    });
-  }
+  return response.json();
 }
 
 function setBrandCookie(brandCode) {
@@ -109,29 +117,19 @@ function authInstance() {
   return fetchCopilotData('auth/instance');
 }
 
-function searchCopilot(id) {
+function searchCopilotByURI(uri) {
   return function () {
-    return fetchCopilotData(`api/search?view=edit&id=${id}`);
+    return fetchCopilotData(`api/search?view=edit&uri=${uri}`);
   }
-}
-
-function fetchCopilotData(path) {
-  return new Promise(function (resolve, reject) {
-    fetch(`https://copilot.aws.conde.io/${path}`, {credentials: 'include', redirect: 'manual'})
-    .then(status)
-    .then(json)
-    .then(resolve)
-    .catch(reject);
-  });
 }
 
 /* Listen for the content-script to send digitalData if it exists */
 chrome.runtime.onMessage.addListener(function (msg, sender) {
-  findCopilotContent(sender.tab, msg.digitalData);
+  findCopilotContent(sender.tab);
 });
 
 /* On Click - open the saved Copilot URL */
-chrome.browserAction.onClicked.addListener(function(tab) {  
+chrome.browserAction.onClicked.addListener(function(tab) {
   chrome.storage.sync.get(`url${tab.id}`, function(value) {
     chrome.tabs.create({url: value[`url${tab.id}`]});
   });
