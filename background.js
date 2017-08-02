@@ -28,7 +28,6 @@ function getBrandFromHostname(hostname) {
 /**
  * Search the API for piece of content using digitalData, if found save the URL and enable the browserAction
  * @param  {Object} tab         tab where digitalData refers to
- * @param  {Object} digitalData data object that include Copilot information
  */
 function findCopilotContent(tab) {
   let brand;
