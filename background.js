@@ -8,20 +8,24 @@ let brandsPromise;
 
 function getBrandFromHostname(hostname) {
   if (!brandsPromise) {
-    brandsPromise = fetchCopilotData('api/configs');
+    brandsPromise = fetchCopilotData('api/configs')
   }
 
   return new Promise(function (resolve, reject) {
     brandsPromise.then(function (brands) {
       let brand = brands.find(function(config) {
-        return hostname.indexOf(config.hostnames.consumer) > -1 || hostname.indexOf(config.hostnames.preview) > -1;
+        let hostnames = config.hostnames || {};
+        return hostname.indexOf(hostnames.consumer) > -1 || hostname.indexOf(hostnames.preview) > -1;
       });
       if (brand) {
         resolve(brand);
       } else {
         reject();
       }
-    })
+    }).catch(err => {
+      brandsPromise = false;
+      reject(err);
+    });
   });
 }
 
