@@ -8,7 +8,7 @@ let brandsPromise;
 
 function getBrandFromHostname(hostname) {
   if (!brandsPromise) {
-    brandsPromise = fetchCopilotData('api/configs')
+    brandsPromise = fetchCopilotData('api/configs');
   }
 
   return new Promise(function (resolve, reject) {
