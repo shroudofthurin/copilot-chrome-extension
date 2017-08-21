@@ -39,7 +39,7 @@ function findCopilotContent(tab) {
 
   let hostname = url.hostname;
   let pathname = url.pathname;
-  let path = pathname.slice(1, pathname.length);
+  let identifier = pathname.replace(/^\/*(.*?)\/*$/, '$1');
 
   getBrandFromHostname(hostname)
   .then(function (result) {
@@ -53,7 +53,7 @@ function findCopilotContent(tab) {
     }
     Promise.reject(new Error('User does not have access to brand'));
   })
-  .then(searchCopilotByURI(encodeURIComponent(path)))
+  .then(searchCopilotByURI(encodeURIComponent(identifier)))
   .then(function(data) {
     if (data.hits.total === 1) {
       let hit = data.hits.hits[0];
